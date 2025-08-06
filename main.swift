@@ -10,14 +10,22 @@ import UniformTypeIdentifiers
 class BrowserTab: ObservableObject, Identifiable, Equatable {
     let id = UUID()
     @Published var url: URL?
+    @Published var urlString: String = ""
     @Published var title: String = "New Tab"
     @Published var isLoading: Bool = false
     let webView: WKWebView
     
     init(url: URL? = nil) {
         self.url = url
-        self.webView = WKWebView()
+        self.urlString = url?.absoluteString ?? ""
+        
+        // Create WebView with proper configuration
+        let configuration = WKWebViewConfiguration()
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
+        
+        self.webView = WKWebView(frame: .zero, configuration: configuration)
         self.webView.allowsMagnification = true
+        self.webView.allowsBackForwardNavigationGestures = true
     }
     
     static func == (lhs: BrowserTab, rhs: BrowserTab) -> Bool {
@@ -38,7 +46,10 @@ class TabManager: ObservableObject {
         let tabURL = url ?? URL(string: homepage)
         let newTab = BrowserTab(url: tabURL)
         tabs.append(newTab)
+        print("DEBUG TAB: Created new tab with URL: \(tabURL?.absoluteString ?? "nil")")
+        print("DEBUG TAB: Total tabs: \(tabs.count)")
         selectedTab = newTab
+        print("DEBUG TAB: Selected tab changed to: \(newTab.id)")
     }
     
     func closeTab(_ tab: BrowserTab) {
@@ -452,8 +463,11 @@ struct TinyBrowserApp: App {
                     switch node {
                     case .bookmark(let bookmark):
                         Button(bookmark.name) {
-                            if let url = URL(string: bookmark.url) {
-                                tabManager.selectedTab?.url = url
+                            if let url = URL(string: bookmark.url),
+                               let tab = tabManager.selectedTab {
+                                tab.url = url
+                                let request = URLRequest(url: url)
+                                tab.webView.load(request)
                             }
                         }
                     case .folder(let folder):
@@ -461,8 +475,11 @@ struct TinyBrowserApp: App {
                             ForEach(folder.children) { child in
                                 if case .bookmark(let bookmark) = child {
                                     Button(bookmark.name) {
-                                        if let url = URL(string: bookmark.url) {
-                                            tabManager.selectedTab?.url = url
+                                        if let url = URL(string: bookmark.url),
+                                           let tab = tabManager.selectedTab {
+                                            tab.url = url
+                                            let request = URLRequest(url: url)
+                                            tab.webView.load(request)
                                         }
                                     }
                                 }
@@ -484,23 +501,32 @@ struct TinyBrowserApp: App {
 struct ContentView: View {
     @EnvironmentObject var tabManager: TabManager
     @EnvironmentObject var bookmarkManager: BookmarkManager
-    @State private var urlString = ""
     @FocusState private var isTextFieldFocused: Bool
     @State private var showingAddBookmark = false
     
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                TextField("Enter URL", text: $urlString)
+                TextField("Enter URL", text: Binding(
+                    get: { tabManager.selectedTab?.urlString ?? "" },
+                    set: { tabManager.selectedTab?.urlString = $0 }
+                ))
                     .textFieldStyle(.roundedBorder)
                     .focused($isTextFieldFocused)
                     .onSubmit {
+                        print("DEBUG TAB: onSubmit triggered with URL: \(tabManager.selectedTab?.urlString ?? "")")
                         loadURL()
                     }
                     .disableAutocorrection(true)
+                    .onAppear {
+                        print("DEBUG TAB: TextField appeared")
+                    }
                     .onChange(of: tabManager.selectedTab) { newValue in
-                        if let url = newValue?.url {
-                            urlString = url.absoluteString
+                        print("DEBUG TAB: onChange triggered, new tab: \(newValue?.id.uuidString ?? "nil")")
+                        // Focus the URL field when switching tabs with a small delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            isTextFieldFocused = true
+                            print("DEBUG TAB: Focus set to URL field")
                         }
                     }
                 
@@ -510,6 +536,11 @@ struct ContentView: View {
                 
                 Button("+") {
                     tabManager.createNewTab()
+                    // The onChange handler will update urlString automatically
+                    // Just focus the field after a small delay to ensure the view updates
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isTextFieldFocused = true
+                    }
                 }
                 .font(.title2)
                 .buttonStyle(.plain)
@@ -543,28 +574,43 @@ struct ContentView: View {
             
             Divider()
             
-            if let selectedTab = tabManager.selectedTab {
-                WebView(tab: selectedTab)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Use a ZStack to layer all WebViews and only show the selected one
+            ZStack {
+                ForEach(tabManager.tabs) { tab in
+                    WebView(tab: tab)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .opacity(tab.id == tabManager.selectedTab?.id ? 1 : 0)
+                        .allowsHitTesting(tab.id == tabManager.selectedTab?.id)
+                }
             }
         }
         .onAppear {
-            if let url = tabManager.selectedTab?.url {
-                urlString = url.absoluteString
-            }
             isTextFieldFocused = true
         }
     }
     
     private func loadURL() {
-        var urlToLoad = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let tab = tabManager.selectedTab else { return }
+        
+        var urlToLoad = tab.urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         
         if !urlToLoad.hasPrefix("http://") && !urlToLoad.hasPrefix("https://") {
             urlToLoad = "https://" + urlToLoad
         }
         
+        print("DEBUG: Attempting to load URL: \(urlToLoad)")
+        
         if let url = URL(string: urlToLoad) {
-            tabManager.selectedTab?.url = url
+            print("DEBUG: Valid URL created: \(url)")
+            
+            // Update the tab's URL and load directly in WebView
+            tab.url = url
+            tab.urlString = url.absoluteString  // Update to the full URL
+            let request = URLRequest(url: url)
+            tab.webView.load(request)
+            print("DEBUG: Load request sent to WebView")
+        } else {
+            print("DEBUG: Failed to create URL from: \(urlToLoad)")
         }
     }
 }
@@ -593,12 +639,49 @@ struct TabItemView: View {
         tabManager.selectedTab?.id == tab.id
     }
     
+    var displayTitle: String {
+        let title = tab.title
+        
+        // Common patterns to remove
+        let patterns = [
+            " - Google Search",
+            " - Google 搜索",
+            " · GitHub",
+            " - Stack Overflow",
+            " | ",
+            " – ",
+            " — "
+        ]
+        
+        var cleanTitle = title
+        for pattern in patterns {
+            if let range = cleanTitle.range(of: pattern) {
+                cleanTitle = String(cleanTitle[..<range.lowerBound])
+                break
+            }
+        }
+        
+        // If still too long, take first 2-3 significant words
+        let words = cleanTitle.split(separator: " ")
+        if words.count > 3 {
+            cleanTitle = words.prefix(2).joined(separator: " ")
+        }
+        
+        // Limit to max 20 characters
+        if cleanTitle.count > 20 {
+            cleanTitle = String(cleanTitle.prefix(17)) + "..."
+        }
+        
+        return cleanTitle.isEmpty ? "New Tab" : cleanTitle
+    }
+    
     var body: some View {
         HStack(spacing: 4) {
-            Text(tab.title)
+            Text(displayTitle)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .font(.system(size: 12))
+                .frame(minWidth: 50, maxWidth: 120, alignment: .leading)
             
             if isHovering || isSelected {
                 Button(action: {
@@ -613,6 +696,7 @@ struct TabItemView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+        .frame(minWidth: 100, maxWidth: 160)
         .background(
             RoundedRectangle(cornerRadius: 4)
                 .fill(isSelected ? Color(NSColor.controlBackgroundColor) : Color.clear)
@@ -622,7 +706,15 @@ struct TabItemView: View {
                 )
         )
         .onTapGesture {
+            print("DEBUG TAB: Tab clicked: \(tab.id), URL: \(tab.url?.absoluteString ?? "nil")")
             tabManager.selectedTab = tab
+            // Force focus to the main window and URL field
+            DispatchQueue.main.async {
+                NSApp.activate(ignoringOtherApps: true)
+                if let window = NSApp.windows.first {
+                    window.makeKeyAndOrderFront(nil)
+                }
+            }
         }
         .onHover { hovering in
             isHovering = hovering
@@ -656,8 +748,11 @@ struct BookmarkItemView: View {
         switch node {
         case .bookmark(let bookmark):
             Button(action: {
-                if let url = URL(string: bookmark.url) {
-                    tabManager.selectedTab?.url = url
+                if let url = URL(string: bookmark.url),
+                   let tab = tabManager.selectedTab {
+                    tab.url = url
+                    let request = URLRequest(url: url)
+                    tab.webView.load(request)
                 }
             }) {
                 HStack(spacing: 4) {
@@ -684,8 +779,11 @@ struct BookmarkItemView: View {
                     switch child {
                     case .bookmark(let bookmark):
                         Button(bookmark.name) {
-                            if let url = URL(string: bookmark.url) {
-                                tabManager.selectedTab?.url = url
+                            if let url = URL(string: bookmark.url),
+                               let tab = tabManager.selectedTab {
+                                tab.url = url
+                                let request = URLRequest(url: url)
+                                tab.webView.load(request)
                             }
                         }
                     case .folder(let subfolder):
@@ -721,15 +819,20 @@ struct WebView: NSViewRepresentable {
     
     func makeNSView(context: Context) -> WKWebView {
         tab.webView.navigationDelegate = context.coordinator
+        
+        // Load initial URL if available
+        if let url = tab.url {
+            let request = URLRequest(url: url)
+            tab.webView.load(request)
+            print("DEBUG: Initial load in makeNSView for URL: \(url)")
+        }
+        
         return tab.webView
     }
     
     func updateNSView(_ webView: WKWebView, context: Context) {
-        if let url = tab.url,
-           webView.url != url {
-            let request = URLRequest(url: url)
-            webView.load(request)
-        }
+        // Don't reload if we're already loading or if the URL hasn't actually changed
+        // The webView.url check doesn't work during loading, so we need a better approach
     }
     
     func makeCoordinator() -> Coordinator {
@@ -744,20 +847,29 @@ struct WebView: NSViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            print("DEBUG: Started loading: \(webView.url?.absoluteString ?? "unknown")")
             tab.isLoading = true
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            print("DEBUG: Finished loading: \(webView.url?.absoluteString ?? "unknown")")
             tab.isLoading = false
             if let title = webView.title, !title.isEmpty {
                 tab.title = title
             }
             if let url = webView.url {
                 tab.url = url
+                tab.urlString = url.absoluteString
             }
         }
         
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            print("DEBUG: Failed to load with error: \(error.localizedDescription)")
+            tab.isLoading = false
+        }
+        
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            print("DEBUG: Failed provisional navigation with error: \(error.localizedDescription)")
             tab.isLoading = false
         }
     }
