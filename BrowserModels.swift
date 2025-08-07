@@ -11,6 +11,9 @@ class BrowserTab: ObservableObject, Identifiable, Equatable {
     @Published var urlString: String = ""
     @Published var title: String = "New Tab"
     @Published var isLoading: Bool = false
+    @Published var hasPasswordsAvailable: Bool = false
+    @Published var canGoBack: Bool = false
+    @Published var canGoForward: Bool = false
     let webView: WKWebView
     
     init(url: URL? = nil) {

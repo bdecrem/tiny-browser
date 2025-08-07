@@ -5,6 +5,7 @@ import AppKit
 struct TinyBrowserApp: App {
     @StateObject private var tabManager = TabManager()
     @StateObject private var bookmarkManager = BookmarkManager.shared
+    @StateObject private var passwordManager = PasswordManager.shared
     @AppStorage("showBookmarkBar") private var showBookmarkBar = true
     
     init() {
@@ -17,6 +18,7 @@ struct TinyBrowserApp: App {
             ContentView()
                 .environmentObject(tabManager)
                 .environmentObject(bookmarkManager)
+                .environmentObject(passwordManager)
                 .frame(minWidth: 900, minHeight: 600)
         }
         .commands {

@@ -11,6 +11,96 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
+                // Navigation buttons
+                Button(action: {
+                    tabManager.selectedTab?.webView.goBack()
+                }) {
+                    Image(systemName: "chevron.left")
+                }
+                .buttonStyle(.plain)
+                .disabled(!(tabManager.selectedTab?.canGoBack ?? false))
+                .help("Go back")
+                
+                Button(action: {
+                    tabManager.selectedTab?.webView.goForward()
+                }) {
+                    Image(systemName: "chevron.right")
+                }
+                .buttonStyle(.plain)
+                .disabled(!(tabManager.selectedTab?.canGoForward ?? false))
+                .help("Go forward")
+                
+                Button(action: {
+                    // Refresh current page
+                    tabManager.selectedTab?.webView.reload()
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.plain)
+                .help("Reload page")
+                
+                Button(action: {
+                    // Go to homepage
+                    if let tab = tabManager.selectedTab {
+                        var homepage = UserDefaults.standard.string(forKey: "defaultHomepage") ?? "https://www.google.com"
+                        
+                        // Ensure the URL has a protocol
+                        if !homepage.hasPrefix("http://") && !homepage.hasPrefix("https://") {
+                            homepage = "https://" + homepage
+                        }
+                        
+                        if let url = URL(string: homepage) {
+                            tab.url = url
+                            tab.urlString = url.absoluteString
+                            let request = URLRequest(url: url)
+                            tab.webView.load(request)
+                            print("Loading homepage: \(homepage)")
+                        } else {
+                            print("Failed to create URL from homepage: \(homepage)")
+                        }
+                    }
+                }) {
+                    Image(systemName: "house")
+                }
+                .buttonStyle(.plain)
+                .help("Go to homepage")
+                
+                Divider()
+                    .frame(height: 20)
+                    .padding(.horizontal, 4)
+                
+                // Password indicator
+                if tabManager.selectedTab?.hasPasswordsAvailable == true {
+                    Button(action: {
+                        // Trigger password autofill - works for both email and password fields
+                        if let tab = tabManager.selectedTab {
+                            tab.webView.evaluateJavaScript("""
+                                (function() {
+                                    // Try password field first
+                                    const passwordField = document.querySelector('input[type="password"]');
+                                    if (passwordField) {
+                                        passwordField.focus();
+                                        passwordField.click();
+                                        return;
+                                    }
+                                    
+                                    // Otherwise try email field (for Amazon-style forms)
+                                    const emailField = document.querySelector('input[type="email"], input[name*="email"], input[id*="email"]');
+                                    if (emailField) {
+                                        emailField.focus();
+                                        emailField.click();
+                                    }
+                                })();
+                            """)
+                        }
+                    }) {
+                        Image(systemName: "key.fill")
+                            .foregroundColor(.blue)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Passwords available - click to autofill")
+                }
+                
                 TextField("Enter URL", text: Binding(
                     get: { tabManager.selectedTab?.urlString ?? "" },
                     set: { tabManager.selectedTab?.urlString = $0 }

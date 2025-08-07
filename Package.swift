@@ -13,7 +13,7 @@ let package = Package(
         .executableTarget(
             name: "TinyBrowser",
             path: ".",
-            sources: ["TinyBrowserApp.swift", "ContentView.swift", "WebView.swift", "BrowserModels.swift", "BookmarkModels.swift"],
+            sources: ["TinyBrowserApp.swift", "ContentView.swift", "WebView.swift", "BrowserModels.swift", "BookmarkModels.swift", "PasswordManager.swift"],
             resources: [.process("Assets.xcassets")],
             swiftSettings: [.unsafeFlags(["-parse-as-library"])]
         )
