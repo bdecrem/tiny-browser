@@ -1,0 +1,15 @@
+{
+  "" : {
+    "const-values" : "/Users/bartbart/Documents/tiny-browser/build/TinyBrowser.build/Release/TinyBrowser.build/Objects-normal/x86_64/TinyBrowser-master.swiftconstvalues",
+    "dependencies" : "/Users/bartbart/Documents/tiny-browser/build/TinyBrowser.build/Release/TinyBrowser.build/Objects-normal/x86_64/TinyBrowser-master.d",
+    "diagnostics" : "/Users/bartbart/Documents/tiny-browser/build/TinyBrowser.build/Release/TinyBrowser.build/Objects-normal/x86_64/TinyBrowser-master.dia",
+    "emit-module-dependencies" : "/Users/bartbart/Documents/tiny-browser/build/TinyBrowser.build/Release/TinyBrowser.build/Objects-normal/x86_64/TinyBrowser-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/bartbart/Documents/tiny-browser/build/TinyBrowser.build/Release/TinyBrowser.build/Objects-normal/x86_64/TinyBrowser-master-emit-module.dia",
+    "swift-dependencies" : "/Users/bartbart/Documents/tiny-browser/build/TinyBrowser.build/Release/TinyBrowser.build/Objects-normal/x86_64/TinyBrowser-master.swiftdeps"
+  },
+  "/Users/bartbart/Documents/tiny-browser/main.swift" : {
+    "index-unit-output-path" : "/TinyBrowser.build/Release/TinyBrowser.build/Objects-normal/x86_64/main.o",
+    "llvm-bc" : "/Users/bartbart/Documents/tiny-browser/build/TinyBrowser.build/Release/TinyBrowser.build/Objects-normal/x86_64/main.bc",
+    "object" : "/Users/bartbart/Documents/tiny-browser/build/TinyBrowser.build/Release/TinyBrowser.build/Objects-normal/x86_64/main.o"
+  }
+}

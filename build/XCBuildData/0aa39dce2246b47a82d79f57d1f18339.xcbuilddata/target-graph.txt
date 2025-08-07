@@ -1,0 +1,2 @@
+Target dependency graph (1 target)
+Target 'TinyBrowser' in project 'TinyBrowser' (no dependencies)

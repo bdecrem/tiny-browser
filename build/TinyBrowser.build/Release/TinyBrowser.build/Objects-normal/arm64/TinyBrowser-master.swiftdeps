@@ -1,0 +1,6 @@
+version: "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
+options: "bf11b8a94e7859868804ee1b37286d472a33b47fd1fb16792568965a7d512852"
+build_start_time: [1754533031, 369550000]
+build_end_time: [1754533038, 261218000]
+inputs:
+  "/Users/bartbart/Documents/tiny-browser/main.swift": !dirty [1754532424, 654522957]

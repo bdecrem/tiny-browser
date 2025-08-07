@@ -8,8 +8,13 @@ A feature-rich web browser built with SwiftUI and WebKit for macOS. Includes tab
 # Build the browser
 xcrun swift build --configuration release
 
-# Run the browser
+# Run the browser (command line)
 ./.build/release/TinyBrowser
+
+# Launch as proper macOS app with dock icon
+open TinyBrowser.app
+
+# Or double-click TinyBrowser.app in Finder
 
 # Or use the test script for debugging
 ./test_build.sh
@@ -22,7 +27,7 @@ rm -rf .build
 - Check if browser is running: `ps aux | grep -i tinybrowser`
 - Kill existing process: `pkill -9 TinyBrowser`
 - Verify window visibility: `osascript -e 'tell application "System Events" to get name of every process whose visible is true' | grep TinyBrowser`
-- View bookmarks file: `cat ~/Documents/TinyBrowser/bookmarks.json`
+- View bookmarks file: `cat ~/Library/Application\ Support/TinyBrowser/bookmarks.json`
 
 ## Project Structure
 - `main.swift` - Monolithic file containing entire application
@@ -54,7 +59,7 @@ rm -rf .build
 
 ### Bookmark System
 - **Data Format**: JSON with hierarchical structure
-- **Storage**: `~/Documents/TinyBrowser/bookmarks.json`
+- **Storage**: `~/Library/Application Support/TinyBrowser/bookmarks.json`
 - **Features**:
   - Bookmark bar below tabs
   - Star button to bookmark current page (Cmd+D)
